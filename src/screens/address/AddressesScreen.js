@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
     View,
     Text,
@@ -7,10 +7,10 @@ import {
     FlatList,
     Alert,
     ActivityIndicator,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { addressesAPI } from '../../services/api';
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import { addressesAPI } from "../../services/api";
 
 export default function AddressesScreen() {
     const [addresses, setAddresses] = useState([]);
@@ -36,8 +36,8 @@ export default function AddressesScreen() {
                 setAddresses(response.data.data);
             }
         } catch (error) {
-            console.error('Error loading addresses:', error);
-            Alert.alert('Error', 'Failed to load addresses');
+            console.error("Error loading addresses:", error);
+            Alert.alert("Error", "Failed to load addresses");
         } finally {
             setIsLoading(false);
         }
@@ -45,25 +45,32 @@ export default function AddressesScreen() {
 
     const handleDeleteAddress = async (addressId) => {
         Alert.alert(
-            'Delete Address',
-            'Are you sure you want to delete this address?',
+            "Delete Address",
+            "Are you sure you want to delete this address?",
             [
-                { text: 'Cancel', style: 'cancel' },
+                { text: "Cancel", style: "cancel" },
                 {
-                    text: 'Delete',
-                    style: 'destructive',
+                    text: "Delete",
+                    style: "destructive",
                     onPress: async () => {
                         try {
-                            const response = await addressesAPI.deleteAddress(addressId);
+                            const response = await addressesAPI.deleteAddress(
+                                addressId
+                            );
                             if (response.data.success) {
-                                setAddresses(prev => prev.filter(addr => addr.id !== addressId));
-                                Alert.alert('Success', 'Address deleted successfully');
+                                setAddresses((prev) =>
+                                    prev.filter((addr) => addr.id !== addressId)
+                                );
+                                Alert.alert(
+                                    "Success",
+                                    "Address deleted successfully"
+                                );
                             } else {
-                                Alert.alert('Error', response.data.message);
+                                Alert.alert("Error", response.data.message);
                             }
                         } catch (error) {
-                            console.error('Error deleting address:', error);
-                            Alert.alert('Error', 'Failed to delete address');
+                            console.error("Error deleting address:", error);
+                            Alert.alert("Error", "Failed to delete address");
                         }
                     },
                 },
@@ -75,19 +82,19 @@ export default function AddressesScreen() {
         try {
             const response = await addressesAPI.setDefaultAddress(addressId);
             if (response.data.success) {
-                setAddresses(prev =>
-                    prev.map(addr => ({
+                setAddresses((prev) =>
+                    prev.map((addr) => ({
                         ...addr,
                         isDefault: addr.id === addressId ? 1 : 0,
                     }))
                 );
-                Alert.alert('Success', 'Default address updated');
+                Alert.alert("Success", "Default address updated");
             } else {
-                Alert.alert('Error', response.data.message);
+                Alert.alert("Error", response.data.message);
             }
         } catch (error) {
-            console.error('Error setting default address:', error);
-            Alert.alert('Error', 'Failed to set default address');
+            console.error("Error setting default address:", error);
+            Alert.alert("Error", "Failed to set default address");
         }
     };
 
@@ -96,7 +103,10 @@ export default function AddressesScreen() {
             <View style={styles.addressHeader}>
                 <View style={styles.addressTypeContainer}>
                     <Text style={styles.addressType}>
-                        {item?.type ? item.type.charAt(0).toUpperCase() + item.type.slice(1) : 'Address'}
+                        {item?.label
+                            ? item.label
+                            : item.type.charAt(0).toUpperCase() +
+                              item.type.slice(1)}
                     </Text>
                     {item?.isDefault ? (
                         <View style={styles.defaultBadge}>
@@ -110,33 +120,54 @@ export default function AddressesScreen() {
                             style={styles.actionButton}
                             onPress={() => handleSetDefault(item?.id)}
                         >
-                            <Ionicons name="star-outline" size={20} color="#007AFF" />
+                            <Ionicons
+                                name="star-outline"
+                                size={20}
+                                color="#007AFF"
+                            />
                         </TouchableOpacity>
                     )}
                     <TouchableOpacity
                         style={styles.actionButton}
-                        onPress={() => navigation.navigate('EditAddress', { addressId: item?.id })}
+                        onPress={() =>
+                            navigation.navigate("EditAddress", {
+                                addressId: item?.id,
+                            })
+                        }
                     >
-                        <Ionicons name="pencil-outline" size={20} color="#007AFF" />
+                        <Ionicons
+                            name="pencil-outline"
+                            size={20}
+                            color="#007AFF"
+                        />
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={styles.actionButton}
                         onPress={() => handleDeleteAddress(item?.id)}
                     >
-                        <Ionicons name="trash-outline" size={20} color="#dc3545" />
+                        <Ionicons
+                            name="trash-outline"
+                            size={20}
+                            color="#dc3545"
+                        />
                     </TouchableOpacity>
                 </View>
             </View>
 
             <View style={styles.addressDetails}>
-                <Text style={styles.fullAddress}>{item?.fullAddress || 'Address not available'}</Text>
+                <Text style={styles.fullAddress}>
+                    {item?.fullAddress || "Address not available"}
+                </Text>
                 {item?.landmark && (
-                    <Text style={styles.landmark}>Landmark: {item.landmark}</Text>
+                    <Text style={styles.landmark}>
+                        Landmark: {item.landmark}
+                    </Text>
                 )}
                 <Text style={styles.cityState}>
-                    {item?.city || 'City'}, {item?.state || 'State'} {item?.pincode || 'Pincode'}
+                    {item?.city || "City"}, {item?.state || "State"}{" "}
+                    {item?.pincode || "Pincode"}
                 </Text>
-                <Text style={styles.country}>{item?.country || 'Country'}</Text>
+                <Text style={styles.country}>{item?.country || "Country"}</Text>
             </View>
         </View>
     );
@@ -162,7 +193,7 @@ export default function AddressesScreen() {
                 <Text style={styles.headerTitle}>My Addresses</Text>
                 <TouchableOpacity
                     style={styles.addButton}
-                    onPress={() => navigation.navigate('AddAddress')}
+                    onPress={() => navigation.navigate("AddAddress")}
                 >
                     <Ionicons name="add" size={24} color="#007AFF" />
                 </TouchableOpacity>
@@ -178,16 +209,20 @@ export default function AddressesScreen() {
                     </Text>
                     <TouchableOpacity
                         style={styles.addFirstAddressButton}
-                        onPress={() => navigation.navigate('AddAddress')}
+                        onPress={() => navigation.navigate("AddAddress")}
                     >
-                        <Text style={styles.addFirstAddressText}>Add Address</Text>
+                        <Text style={styles.addFirstAddressText}>
+                            Add Address
+                        </Text>
                     </TouchableOpacity>
                 </View>
             ) : (
                 <FlatList
-                    data={addresses?.filter(item => item != null) || []}
+                    data={addresses?.filter((item) => item != null) || []}
                     renderItem={renderAddressItem}
-                    keyExtractor={(item) => item?.id?.toString() || Math.random().toString()}
+                    keyExtractor={(item) =>
+                        item?.id?.toString() || Math.random().toString()
+                    }
                     contentContainerStyle={styles.addressesList}
                     showsVerticalScrollIndicator={false}
                 />
@@ -199,22 +234,22 @@ export default function AddressesScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: "#f5f5f5",
     },
     loadingContainer: {
         flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
+        justifyContent: "center",
+        alignItems: "center",
     },
     header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        backgroundColor: '#fff',
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        backgroundColor: "#fff",
         padding: 15,
         paddingTop: 50,
         elevation: 2,
-        shadowColor: '#000',
+        shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
@@ -224,85 +259,85 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         fontSize: 18,
-        fontWeight: 'bold',
-        color: '#333',
+        fontWeight: "bold",
+        color: "#333",
     },
     addButton: {
         padding: 5,
     },
     emptyContainer: {
         flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
+        justifyContent: "center",
+        alignItems: "center",
         padding: 20,
     },
     emptyText: {
         fontSize: 20,
-        fontWeight: 'bold',
-        color: '#333',
+        fontWeight: "bold",
+        color: "#333",
         marginTop: 20,
         marginBottom: 10,
     },
     emptySubtext: {
         fontSize: 16,
-        color: '#666',
-        textAlign: 'center',
+        color: "#666",
+        textAlign: "center",
         marginBottom: 30,
     },
     addFirstAddressButton: {
-        backgroundColor: '#007AFF',
+        backgroundColor: "#007AFF",
         paddingHorizontal: 30,
         paddingVertical: 12,
         borderRadius: 8,
     },
     addFirstAddressText: {
-        color: '#fff',
+        color: "#fff",
         fontSize: 16,
-        fontWeight: '600',
+        fontWeight: "600",
     },
     addressesList: {
         padding: 15,
     },
     addressCard: {
-        backgroundColor: '#fff',
+        backgroundColor: "#fff",
         borderRadius: 10,
         padding: 15,
         marginBottom: 10,
         elevation: 2,
-        shadowColor: '#000',
+        shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
     },
     addressHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
         marginBottom: 10,
     },
     addressTypeContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
+        flexDirection: "row",
+        alignItems: "center",
     },
     addressType: {
         fontSize: 16,
-        fontWeight: 'bold',
-        color: '#333',
+        fontWeight: "bold",
+        color: "#333",
         marginRight: 10,
     },
     defaultBadge: {
-        backgroundColor: '#28a745',
+        backgroundColor: "#28a745",
         paddingHorizontal: 8,
         paddingVertical: 2,
         borderRadius: 10,
     },
     defaultText: {
-        color: '#fff',
+        color: "#fff",
         fontSize: 10,
-        fontWeight: 'bold',
+        fontWeight: "bold",
     },
     addressActions: {
-        flexDirection: 'row',
+        flexDirection: "row",
     },
     actionButton: {
         padding: 5,
@@ -313,22 +348,22 @@ const styles = StyleSheet.create({
     },
     fullAddress: {
         fontSize: 14,
-        color: '#333',
+        color: "#333",
         marginBottom: 5,
         lineHeight: 20,
     },
     landmark: {
         fontSize: 12,
-        color: '#666',
+        color: "#666",
         marginBottom: 5,
     },
     cityState: {
         fontSize: 12,
-        color: '#666',
+        color: "#666",
         marginBottom: 2,
     },
     country: {
         fontSize: 12,
-        color: '#666',
+        color: "#666",
     },
 });

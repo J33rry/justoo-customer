@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import * as Location from "expo-location";
 import {
     View,
@@ -14,8 +14,9 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplete";
 import { addressesAPI } from "../../services/api";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { GOOGLE_PLACES_API_KEY } from "@env";
 
 export default function AddAddressScreen() {
     const [formData, setFormData] = useState({
@@ -33,7 +34,9 @@ export default function AddAddressScreen() {
     });
     const [isLoading, setIsLoading] = useState(false);
     const [isFetchingLocation, setIsFetchingLocation] = useState(false);
+    const [isOutOfServiceZone, setIsOutOfServiceZone] = useState(false);
     const navigation = useNavigation();
+    const googlePlacesRef = useRef(null);
 
     const addressTypes = [
         { key: "home", label: "Home", icon: "home" },
@@ -46,6 +49,19 @@ export default function AddAddressScreen() {
             ...prev,
             [field]: value,
         }));
+        // Reset out of service zone flag when address fields change
+        if (
+            [
+                "fullAddress",
+                "city",
+                "state",
+                "pincode",
+                "latitude",
+                "longitude",
+            ].includes(field)
+        ) {
+            setIsOutOfServiceZone(false);
+        }
     };
 
     const validateForm = () => {
@@ -82,24 +98,47 @@ export default function AddAddressScreen() {
 
         try {
             setIsLoading(true);
-            const response = await addressesAPI.addAddress(formData);
+            const check = await addressesAPI.validateAddress(formData);
+            if (!check.data.success) {
+                setIsOutOfServiceZone(true);
+                Alert.alert(
+                    "Out of Service Area",
+                    check.data.message || "Address is out of serviceable area"
+                );
+                setIsLoading(false);
+                return;
+            }
+            setIsOutOfServiceZone(false);
+            try {
+                const response = await addressesAPI.addAddress(formData);
 
-            if (response.data.success) {
-                Alert.alert("Success", "Address added successfully!", [
-                    {
-                        text: "OK",
-                        onPress: () => navigation.goBack(),
-                    },
-                ]);
-            } else {
+                if (response.data.success) {
+                    Alert.alert("Success", "Address added successfully!", [
+                        {
+                            text: "OK",
+                            onPress: () => navigation.goBack(),
+                        },
+                    ]);
+                } else {
+                    Alert.alert(
+                        "Error",
+                        response.data.message || "Failed to add address"
+                    );
+                }
+            } catch (error) {
+                // console.error("Error adding address:", error);
                 Alert.alert(
                     "Error",
-                    response.data.message || "Failed to add address"
+                    "Failed to add address. Please try again."
                 );
             }
         } catch (error) {
-            console.error("Error adding address:", error);
-            Alert.alert("Error", "Failed to add address. Please try again.");
+            // console.error("Error validating address:", error);
+            setIsOutOfServiceZone(true);
+            Alert.alert(
+                "Area out of service",
+                "Address is out of serviceable area"
+            );
         } finally {
             setIsLoading(false);
         }
@@ -140,13 +179,7 @@ export default function AddAddressScreen() {
                 handleInputChange("pincode", place.postalCode || "");
                 handleInputChange("country", place.country || "");
 
-                const approxAddress = [
-                    place.name,
-                    place.street,
-                    place.district,
-                    place.city,
-                    place.region,
-                ]
+                const approxAddress = [place.name, place.street, place.district]
                     .filter(Boolean)
                     .join(", ");
 
@@ -165,7 +198,11 @@ export default function AddAddressScreen() {
             style={styles.container}
             behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-            <ScrollView style={styles.container}>
+            <ScrollView
+                style={styles.container}
+                keyboardShouldPersistTaps="handled"
+                nestedScrollEnabled={true}
+            >
                 {/* Header */}
                 <View style={styles.header}>
                     <TouchableOpacity
@@ -247,7 +284,9 @@ export default function AddAddressScreen() {
                 </View>
                 {/* Address Label */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Label (Optional)</Text>
+                    <Text style={styles.sectionTitle}>
+                        Room/Flat/House number
+                    </Text>
                     <TextInput
                         style={styles.input}
                         placeholder="e.g., My Home, Office, etc."
@@ -260,19 +299,138 @@ export default function AddAddressScreen() {
                 </View>
 
                 {/* Full Address */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Full Address *</Text>
-                    <TextInput
-                        style={[styles.input, styles.textArea]}
-                        placeholder="House/Flat no., Building name, Area, Street"
-                        value={formData.fullAddress}
-                        onChangeText={(text) =>
-                            handleInputChange("fullAddress", text)
-                        }
-                        multiline
-                        numberOfLines={3}
-                        textAlignVertical="top"
+                <View style={[styles.section, { zIndex: 1 }]}>
+                    <Text style={styles.sectionTitle}>Address *</Text>
+                    <GooglePlacesAutocomplete
+                        ref={googlePlacesRef}
+                        placeholder="Search for your address..."
+                        fetchDetails={true}
+                        onPress={(data, details = null) => {
+                            if (details) {
+                                // Extract address components
+                                // console.log(details);
+                                const addressComponents =
+                                    details.address_components || [];
+
+                                let city = "";
+                                let state = "";
+                                let pincode = "";
+                                let country = "India";
+
+                                let fullAddress =
+                                    !details.formatted_address.includes(
+                                        details.name
+                                    )
+                                        ? details.name +
+                                          ", " +
+                                          details.formatted_address
+                                        : details.formatted_address;
+
+                                addressComponents.forEach((component) => {
+                                    const types = component.types;
+                                    if (types.includes("locality")) {
+                                        city = component.long_name;
+                                    }
+                                    if (
+                                        types.includes(
+                                            "administrative_area_level_1"
+                                        )
+                                    ) {
+                                        state = component.long_name;
+                                    }
+                                    if (types.includes("postal_code")) {
+                                        pincode = component.long_name;
+                                    }
+                                    if (types.includes("country")) {
+                                        country = component.long_name;
+                                    }
+                                });
+
+                                fullAddress = fullAddress
+                                    .replace(", India", "")
+                                    .replace(", " + state, "")
+                                    .replace(", " + city, "")
+                                    .replace(", " + pincode, "");
+                                // Update form data
+                                setFormData((prev) => ({
+                                    ...prev,
+                                    fullAddress:
+                                        fullAddress || data.description,
+                                    city: city,
+                                    state: state,
+                                    pincode: pincode,
+                                    country: country,
+                                    latitude:
+                                        details.geometry?.location?.lat || null,
+                                    longitude:
+                                        details.geometry?.location?.lng || null,
+                                }));
+                                setIsOutOfServiceZone(false);
+                            }
+                        }}
+                        query={{
+                            key: GOOGLE_PLACES_API_KEY,
+                            language: "en",
+                            components: "country:in", // Restrict to India
+                        }}
+                        styles={{
+                            container: {
+                                flex: 0,
+                            },
+                            textInputContainer: {
+                                backgroundColor: "transparent",
+                            },
+                            textInput: {
+                                height: 50,
+                                borderWidth: 1,
+                                borderColor: "#ddd",
+                                borderRadius: 8,
+                                paddingHorizontal: 12,
+                                fontSize: 16,
+                                backgroundColor: "#fff",
+                            },
+                            listView: {
+                                backgroundColor: "#fff",
+                                borderWidth: 1,
+                                borderColor: "#ddd",
+                                borderRadius: 8,
+                                marginTop: 5,
+                            },
+                            row: {
+                                backgroundColor: "#fff",
+                                padding: 13,
+                                height: "auto",
+                                flexDirection: "row",
+                            },
+                            separator: {
+                                height: 1,
+                                backgroundColor: "#eee",
+                            },
+                            description: {
+                                fontSize: 14,
+                            },
+                            poweredContainer: {
+                                display: "none",
+                            },
+                        }}
+                        textInputProps={{
+                            value: formData.fullAddress,
+                            onChangeText: (text) => {
+                                handleInputChange("fullAddress", text);
+                            },
+                        }}
+                        enablePoweredByContainer={false}
+                        debounce={300}
+                        minLength={3}
+                        nearbyPlacesAPI="GooglePlacesSearch"
+                        disableScroll={true}
+                        listViewDisplayed="auto"
                     />
+                    {formData.fullAddress ? (
+                        <Text style={styles.selectedAddressText}>
+                            Selected: {formData.fullAddress}
+                        </Text>
+                    ) : null}
                 </View>
 
                 {/* Landmark */}
@@ -376,10 +534,11 @@ export default function AddAddressScreen() {
                     <TouchableOpacity
                         style={[
                             styles.saveButton,
-                            isLoading && styles.saveButtonDisabled,
+                            (isLoading || isOutOfServiceZone) &&
+                                styles.saveButtonDisabled,
                         ]}
                         onPress={handleSaveAddress}
-                        disabled={isLoading}
+                        disabled={isLoading || isOutOfServiceZone}
                     >
                         {isLoading ? (
                             <ActivityIndicator color="#fff" />
@@ -512,6 +671,12 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: "#666",
         textAlign: "center",
+    },
+    selectedAddressText: {
+        marginTop: 10,
+        fontSize: 12,
+        color: "#007AFF",
+        fontStyle: "italic",
     },
     defaultContainer: {
         paddingVertical: 10,

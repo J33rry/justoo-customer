@@ -116,6 +116,7 @@ export const addressesAPI = {
     setDefaultAddress: (addressId) =>
         api.put(`/addresses/${addressId}/default`),
     validateAddress: (params) => api.get("/addresses/validate", { params }),
+    // checkAddressZone: (params) => api.get("/addresses/zones/check", { params }),
 };
 
 export default api;
