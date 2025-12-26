@@ -92,7 +92,7 @@ export const cartAPI = {
     updateCartItem: (itemId, data) => api.put(`/cart/item/${itemId}`, data),
     removeFromCart: (itemId) => api.delete(`/cart/item/${itemId}`),
     clearCart: () => api.delete("/cart"),
-    getCartSummary: () => api.get("/cart/summary"),
+    getCartSummary: (params) => api.get("/cart/summary", { params }),
 };
 
 // Orders API
@@ -116,7 +116,8 @@ export const addressesAPI = {
     setDefaultAddress: (addressId) =>
         api.put(`/addresses/${addressId}/default`),
     validateAddress: (params) => api.get("/addresses/validate", { params }),
-    // checkAddressZone: (params) => api.get("/addresses/zones/check", { params }),
+    getAddressZone: (zoneId) =>
+        api.get("/addresses/zones", { params: { zoneId } }),
 };
 
 export default api;

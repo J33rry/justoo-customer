@@ -26,6 +26,24 @@ export default function CheckoutScreen() {
         loadCheckoutData();
     }, []);
 
+    useEffect(() => {
+        if (selectedAddress) {
+            loadCartSummary(selectedAddress.id);
+        }
+    }, [selectedAddress]);
+
+    const loadCartSummary = async (addressId) => {
+        try {
+            const cartResponse = await cartAPI.getCartSummary({ addressId });
+            if (cartResponse.data.success) {
+                setCartSummary(cartResponse.data.data);
+                console.log(cartSummary);
+            }
+        } catch (error) {
+            console.error("Error loading cart summary:", error);
+        }
+    };
+
     const loadCheckoutData = async () => {
         try {
             setIsLoading(true);
@@ -40,14 +58,23 @@ export default function CheckoutScreen() {
 
             if (addressesResponse.data.success) {
                 setAddresses(addressesResponse.data.data);
+
                 // Auto-select default address
                 const defaultAddress = addressesResponse.data.data.find(
                     (addr) => addr.isDefault
                 );
                 if (defaultAddress) {
                     setSelectedAddress(defaultAddress);
+                    // Reload cart summary with selected address
+                    loadCartSummary(defaultAddress.id);
                 }
             }
+            // if (selectedAddress) {
+            //     const zoneResponse = await addressesAPI.getAddressZones(
+            //         selectedAddress.id
+            //     );
+            //     console.log("Address Zone Response:", zoneResponse);
+            // }
         } catch (error) {
             console.error("Error loading checkout data:", error);
             Alert.alert("Error", "Failed to load checkout data");
@@ -56,7 +83,7 @@ export default function CheckoutScreen() {
             setIsLoading(false);
         }
     };
-
+    // console.log(addresses);
     const handlePlaceOrder = async () => {
         if (!selectedAddress) {
             Alert.alert("Error", "Please select a delivery address");
@@ -146,6 +173,25 @@ export default function CheckoutScreen() {
     const selectAddress = (address) => {
         setSelectedAddress(address);
     };
+    const [zoneInfo, setZoneInfo] = useState(null);
+    const loadAddressZone = async () => {
+        if (!selectedAddress?.zoneId) return;
+        try {
+            const res = await addressesAPI.getAddressZone(
+                selectedAddress.zoneId
+            );
+            if (res.data.success) {
+                setZoneInfo(res.data.data.zone);
+                // console.log(res.data.data.zone);
+            }
+        } catch (error) {
+            console.error("Error loading address zone:", error);
+        }
+    };
+
+    useEffect(() => {
+        loadAddressZone();
+    }, [selectedAddress]);
 
     if (isLoading) {
         return (
@@ -188,7 +234,11 @@ export default function CheckoutScreen() {
             <View style={styles.topBar}>
                 <View>
                     <Text style={styles.topLabel}>Estimated arrival</Text>
-                    <Text style={styles.topValue}>10 - 15 mins</Text>
+                    <Text style={styles.topValue}>
+                        {zoneInfo?.estimatedDeliveryTime
+                            ? zoneInfo.estimatedDeliveryTime + " mins"
+                            : "N/A"}
+                    </Text>
                 </View>
                 <View style={styles.topChip}>
                     <Ionicons
@@ -227,8 +277,9 @@ export default function CheckoutScreen() {
                     </View>
                 ) : (
                     <ScrollView
-                        horizontal
+                        vertical
                         showsHorizontalScrollIndicator={false}
+                        showsVerticalScrollIndicator={false}
                     >
                         {addresses
                             ?.filter((address) => address != null)
@@ -243,13 +294,13 @@ export default function CheckoutScreen() {
                                     onPress={() => selectAddress(address)}
                                 >
                                     <Text style={styles.addressType}>
-                                        {address?.type
-                                            ? address.type
+                                        {address?.label
+                                            ? address.label
+                                            : address.type
                                                   .charAt(0)
                                                   .toUpperCase() +
-                                              address.type.slice(1)
-                                            : "Address"}
-                                        {address?.isDefault && " (Default)"}
+                                              address.type.slice(1)}
+                                        {/* {address?.isDefault && " (Default)"} */}
                                     </Text>
                                     <Text
                                         style={styles.addressText}

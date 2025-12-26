@@ -12,6 +12,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { cartAPI } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 import ItemImage from "../components/ItemImage";
 import { colors, spacing, typography, radius, shadow } from "../theme";
 
@@ -19,16 +20,21 @@ export default function CartScreen() {
     const [cart, setCart] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const navigation = useNavigation();
+    const { isAuthenticated } = useAuth();
 
     useEffect(() => {
-        loadCart();
-    }, []);
+        if (isAuthenticated) {
+            loadCart();
+        }
+    }, [isAuthenticated]);
 
     // Refresh cart when screen comes into focus
     useFocusEffect(
         React.useCallback(() => {
-            loadCart();
-        }, [])
+            if (isAuthenticated) {
+                loadCart();
+            }
+        }, [isAuthenticated])
     );
 
     const loadCart = async () => {
